@@ -46,7 +46,5 @@ For more information please examine qt example.
 
 -Token generator
 
--Stream changes to a single location(text/event-stream)
-
 
 
