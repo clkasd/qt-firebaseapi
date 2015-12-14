@@ -9,6 +9,7 @@
 #include <QUrlQuery>
 #include <QDebug>
 #include <QtGlobal>
+#include <datasnapshot.h>
 class Firebase : public QObject
 {
     Q_OBJECT
@@ -21,12 +22,17 @@ public:
     void getValue();
     void deleteValue();
     void setToken(QString);
+    void listenEvents();
     Firebase* child(QString childName);
 
 signals:
     void eventResponseReady(QString);
+    void eventDataChanged(DataSnapshot*);
 public slots:
     void replyFinished(QNetworkReply*);
+    void onReadyRead(QNetworkReply*);
+    void eventFinished();
+    void eventReadyRead();
 private:
     QString host;
     QString firebaseToken="";
@@ -35,6 +41,8 @@ private:
     QString latestNode;
     QString buildPath(int);
     QString createJson(QString);
+    void open(const QUrl &url);
+    QByteArray trimValue(const QByteArray &line) const;
 };
 
 #endif // FIREBASE_H

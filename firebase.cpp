@@ -2,7 +2,8 @@
 #include <string.h>
 #include <QIODevice>
 #include <QBuffer>
-
+#include <QJsonDocument>
+#include <datasnapshot.h>
 Firebase::Firebase(QObject *parent) :
     QObject(parent)
 {
@@ -15,13 +16,13 @@ void Firebase::init()
 }
 Firebase::Firebase(QString hostName)
 {
-   host=hostName;
-   currentNode="";
-   init();
+    host=hostName;
+    currentNode="";
+    init();
 }
 void Firebase::setToken(QString token)
 {
-   firebaseToken=token;
+    firebaseToken=token;
 }
 Firebase::Firebase(QString hostName,QString child)
 {
@@ -36,8 +37,57 @@ Firebase* Firebase::child(QString childName)
     childNode->setToken(firebaseToken);
     return childNode;
 }
+void Firebase::open(const QUrl &url)
+{
+    QNetworkRequest request(url);
+    request.setRawHeader("Accept",
+                         "text/event-stream");
+    QNetworkReply *_reply = manager->get(request);
+    connect(_reply, &QNetworkReply::readyRead, this, &Firebase::eventReadyRead);
+    connect(_reply, &QNetworkReply::finished, this, &Firebase::eventFinished);
+}
+void Firebase::eventFinished()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    if (reply)
+    {
+        QUrl redirectUrl = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
+        if (!redirectUrl.isEmpty())
+        {
+            reply->deleteLater();
+            open(redirectUrl);
+            return;
+        }
+        reply->deleteLater();
+    }
+}
+void Firebase::eventReadyRead()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    if(reply)
+    {
+        QByteArray line=reply->readLine();
+        if(!line.isEmpty())
+        {
+            QByteArray eventName=trimValue(line);
+            line=reply->readAll();
+            if(eventName=="put")
+            {
+                DataSnapshot *dataSnapshot=new DataSnapshot(line);
+                emit eventDataChanged(dataSnapshot);
+            }
+        }
+    }
+    reply->readAll();
+}
+void Firebase::onReadyRead(QNetworkReply *reply)
+{
+    /*qDebug()<<"incoming data";
+    qDebug()<<reply->readAll();*/
+}
 void Firebase::replyFinished(QNetworkReply *reply)
 {
+    //qDebug()<<reply->readAll();
     QString data=QString(reply->readAll());
     emit eventResponseReady(data);
 }
@@ -46,7 +96,7 @@ void Firebase::setValue(QString strVal)
     //Json data creation
     QNetworkRequest request(buildPath(1));
     request.setHeader(QNetworkRequest::ContentTypeHeader,
-        "application/x-www-form-urlencoded");
+                      "application/x-www-form-urlencoded");
     QBuffer *buffer=new QBuffer();
     buffer->open((QBuffer::ReadWrite));
     buffer->write(createJson(strVal).toUtf8());
@@ -63,6 +113,10 @@ void Firebase::getValue()
 {
     QNetworkRequest request(buildPath(0));
     manager->get(request);
+}
+void Firebase::listenEvents()
+{
+    open(buildPath(0));
 }
 void Firebase::deleteValue()
 {
@@ -96,4 +150,12 @@ QString Firebase::buildPath(int mode)
         destination.append("?auth=").append(firebaseToken);
     return destination;
 
+}
+QByteArray Firebase::trimValue(const QByteArray &line) const
+{
+    QByteArray value;
+    int index = line.indexOf(':');
+    if (index > 0)
+        value = line.right(line.size() - index  - 1);
+    return value.trimmed();
 }

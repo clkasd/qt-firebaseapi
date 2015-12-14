@@ -17,8 +17,12 @@ TEMPLATE = app
 
 SOURCES += main.cpp \
     actionhandler.cpp \
-    firebase.cpp
+    firebase.cpp \
+    datasnapshot.cpp \
+    json.cpp
 
 HEADERS += \
     actionhandler.h \
-    firebase.h
+    firebase.h \
+    datasnapshot.h \
+    json.h

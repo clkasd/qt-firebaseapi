@@ -7,6 +7,7 @@
 #include <QUrl>
 #include <QDebug>
 #include <QString>
+#include <datasnapshot.h>
 class ActionHandler:public QObject
 {
     Q_OBJECT
@@ -14,6 +15,7 @@ public:
     ActionHandler();
 public slots:
     void onResponseReady(QString);
+    void onDataChanged(DataSnapshot*);
 private:
 };
 

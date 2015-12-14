@@ -4,15 +4,16 @@
 ActionHandler::ActionHandler()
 {
     Firebase *firebase=new Firebase("https://firexample.firebaseio.com/");
-    firebase->setToken("cxOMEbyj7kdt7tlHsw8lhlj2W4T5ea5lVxBzgRUE");
-    firebase->child("exampledata")->setValue("test1");
-    firebase->child("exampledata2")->setValue("test2");
-    Firebase *childFirebase=firebase->child("exampledata3");
-    childFirebase->child("examplechild data")->setValue("test child1");
-    //connect(childFirebase,SIGNAL(eventResponseReady(QString)),this,SLOT(onResponseReady(QString)));
+    firebase->listenEvents();
     connect(firebase,SIGNAL(eventResponseReady(QString)),this,SLOT(onResponseReady(QString)));
+    connect(firebase,SIGNAL(eventDataChanged(DataSnapshot*)),this,SLOT(onDataChanged(DataSnapshot*)));
 }
 void ActionHandler::onResponseReady(QString data)
 {
+    qDebug()<<"answer";
     qDebug()<<data;
+}
+void ActionHandler::onDataChanged(DataSnapshot *data)
+{
+    qDebug()<<data->getDataMap();
 }
